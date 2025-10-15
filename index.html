@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Code-Barres - Bon de Livraison</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .scan-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-add {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-add:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .btn-export {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .btn-palette {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-palette:hover {
+            background: #e68900;
+            transform: translateY(-2px);
+        }
+        
+        .data-table {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #scanner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #scanner-container.active {
+            display: flex;
+        }
+
+        #interactive {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+        }
+
+        #interactive video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .close-scanner-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-camera {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-camera:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .scan-section, .button-group {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Scanner Code-Barres - Bon de Livraison</h1>
+        
+        <div id="message" class="message"></div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-label">Articles Scannés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalQuantity">0</div>
+                <div class="stat-label">Quantité Totale</div>
+            </div>
+        </div>
+        
+        <div class="scan-section">
+            <div class="input-group">
+                <label for="paletteNumber" style="color: #667eea; font-size: 18px;">🎯 Numéro de Palette</label>
+                <input type="text" id="paletteNumber" placeholder="Entrez le numéro de palette (ex: PAL001)" style="border: 3px solid #667eea; font-weight: bold;">
+                <small style="color: #667eea; display: block; margin-top: 5px;">
+                    ⚠️ <strong>Important :</strong> Saisissez le numéro de palette avant d'ajouter les articles
+                </small>
+            </div>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 2px solid #e0e0e0;">
+            
+            <div class="input-group">
+                <label for="barcodeInput">Scanner le Code-Barres ou Saisie Manuelle</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="barcodeInput" placeholder="Scanner: CABLE123;25;ORD456" style="flex: 1;">
+                    <button class="btn-camera" onclick="openCamera()" style="padding: 12px 20px; white-space: nowrap;">📷 Caméra</button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    🔍 <strong>Scan automatique :</strong> Format: Code;Quantité;Ordre (s'ajoute automatiquement)<br>
+                    📷 <strong>Utiliser la caméra :</strong> Cliquez sur le bouton Caméra pour scanner avec votre appareil<br>
+                    ✍️ <strong>Saisie manuelle :</strong> Remplissez les champs ci-dessous
+                </small>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px;">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="manualCode">Code</label>
+                    <input type="text" id="manualCode" placeholder="CABLE123">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="manualQuantity">Quantité</label>
+                    <input type="number" id="manualQuantity" placeholder="25">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="manualOrdre">Ordre</label>
+                    <input type="text" id="manualOrdre" placeholder="ORD456">
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-add" onclick="addManualEntry()">➕ Ajouter Saisie Manuelle</button>
+                <button class="btn-export" onclick="exportToExcel()">📥 Exporter vers Excel</button>
+                <button class="btn-clear" onclick="clearAll()">🗑️ Tout Effacer</button>
+                <button class="btn-palette" onclick="clearPalette()">🔄 Changer Palette</button>
+            </div>
+        </div>
+        
+        <div class="data-table">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>N° Palette</th>
+                        <th>Code</th>
+                        <th>Quantité</th>
+                        <th>Ordre</th>
+                        <th>Date/Heure</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Scanner Camera Container -->
+    <div id="scanner-container">
+        <div id="interactive" class="viewport"></div>
+        <div class="scanner-controls">
+            <button class="close-scanner-btn" onclick="closeCamera()">❌ Fermer la Caméra</button>
+        </div>
+    </div>
+
+    <script>
+        let scannedData = [];
+        let counter = 1;
+        let cameraActive = false;
+
+        // Focus sur l'input palette au chargement
+        window.addEventListener('load', function() {
+            document.getElementById('paletteNumber').focus();
+        });
+
+        // Écouter l'événement Enter pour ajout automatique
+        document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addBarcode();
+            }
+        });
+
+        // Ajout automatique après scan (détection automatique)
+        let scanBuffer = '';
+        let scanTimeout;
+        
+        document.getElementById('barcodeInput').addEventListener('input', function(e) {
+            clearTimeout(scanTimeout);
+            scanTimeout = setTimeout(() => {
+                // Si le champ contient des données et 2 points-virgules, c'est probablement un scan
+                const value = e.target.value.trim();
+                if (value && (value.match(/;/g) || []).length === 2) {
+                    addBarcode();
+                }
+            }, 100); // Délai de 100ms après la fin de la saisie
+        });
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = 'message ' + type;
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        function addManualEntry() {
+            const paletteNumber = document.getElementById('paletteNumber').value.trim();
+            const code = document.getElementById('manualCode').value.trim();
+            const quantity = document.getElementById('manualQuantity').value.trim();
+            const ordre = document.getElementById('manualOrdre').value.trim();
+
+            if (!paletteNumber) {
+                showMessage('⚠️ Veuillez d\'abord saisir le numéro de palette!', 'error');
+                document.getElementById('paletteNumber').focus();
+                return;
+            }
+
+            if (!code || !quantity || !ordre) {
+                showMessage('Veuillez remplir tous les champs (Code, Quantité, Ordre)', 'error');
+                return;
+            }
+
+            // Vérifier si la quantité est un nombre
+            if (isNaN(quantity) || parseFloat(quantity) <= 0) {
+                showMessage('La quantité doit être un nombre positif!', 'error');
+                return;
+            }
+
+            // Ajouter aux données
+            const now = new Date();
+            const dateTime = now.toLocaleString('fr-FR');
+            
+            const entry = {
+                id: counter++,
+                palette: paletteNumber,
+                code: code,
+                quantity: parseFloat(quantity),
+                ordre: ordre,
+                dateTime: dateTime
+            };
+
+            scannedData.push(entry);
+            updateTable();
+            updateStats();
+            
+            // Vider les champs manuels
+            document.getElementById('manualCode').value = '';
+            document.getElementById('manualQuantity').value = '';
+            document.getElementById('manualOrdre').value = '';
+            
+            // Refocus sur le premier champ
+            document.getElementById('manualCode').focus();
+            
+            showMessage('Article ajouté avec succès!', 'success');
+        }
+
+        function addBarcode() {
+            const paletteNumber = document.getElementById('paletteNumber').value.trim();
+            const input = document.getElementById('barcodeInput');
+            const barcode = input.value.trim();
+
+            if (!paletteNumber) {
+                showMessage('⚠️ Veuillez d\'abord saisir le numéro de palette!', 'error');
+                document.getElementById('paletteNumber').focus();
+                input.value = '';
+                return;
+            }
+
+            if (!barcode) {
+                showMessage('Veuillez scanner ou saisir un code-barres', 'error');
+                return;
+            }
+
+            // Séparer les données par ";"
+            const parts = barcode.split(';');
+            
+            if (parts.length !== 3) {
+                showMessage('Format incorrect! Utilisez: code;quantité;ordre', 'error');
+                input.value = '';
+                input.focus();
+                return;
+            }
+
+            const code = parts[0].trim();
+            const quantity = parts[1].trim();
+            const ordre = parts[2].trim();
+
+            if (!code || !quantity || !ordre) {
+                showMessage('Code, quantité ou ordre manquant!', 'error');
+                input.value = '';
+                input.focus();
+                return;
+            }
+
+            // Vérifier si la quantité est un nombre
+            if (isNaN(quantity)) {
+                showMessage('La quantité doit être un nombre!', 'error');
+                input.value = '';
+                input.focus();
+                return;
+            }
+
+            // Ajouter aux données
+            const now = new Date();
+            const dateTime = now.toLocaleString('fr-FR');
+            
+            const entry = {
+                id: counter++,
+                palette: paletteNumber,
+                code: code,
+                quantity: parseFloat(quantity),
+                ordre: ordre,
+                dateTime: dateTime
+            };
+
+            scannedData.push(entry);
+            updateTable();
+            updateStats();
+            
+            // Vider l'input et refocus automatiquement
+            input.value = '';
+            input.focus();
+            
+            showMessage('Article ajouté avec succès!', 'success');
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            scannedData.forEach((item, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.id}</td>
+                    <td><strong style="color: #667eea;">${item.palette}</strong></td>
+                    <td>${item.code}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.ordre}</td>
+                    <td>${item.dateTime}</td>
+                    <td><button class="delete-btn" onclick="deleteRow(${index})">Supprimer</button></td>
+                `;
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('totalItems').textContent = scannedData.length;
+            const totalQty = scannedData.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('totalQuantity').textContent = totalQty;
+        }
+
+        function deleteRow(index) {
+            scannedData.splice(index, 1);
+            updateTable();
+            updateStats();
+            showMessage('Article supprimé', 'success');
+        }
+
+        function clearPalette() {
+            const paletteInput = document.getElementById('paletteNumber');
+            if (paletteInput.value.trim() === '') {
+                showMessage('Le champ palette est déjà vide', 'error');
+                return;
+            }
+            
+            if (confirm('Voulez-vous changer de palette? (Le numéro actuel sera effacé)')) {
+                paletteInput.value = '';
+                paletteInput.focus();
+                showMessage('Vous pouvez maintenant saisir un nouveau numéro de palette', 'success');
+            }
+        }
+
+        function clearAll() {
+            if (scannedData.length === 0) {
+                showMessage('Aucune donnée à effacer', 'error');
+                return;
+            }
+            
+            if (confirm('Êtes-vous sûr de vouloir effacer toutes les données?')) {
+                scannedData = [];
+                counter = 1;
+                updateTable();
+                updateStats();
+                showMessage('Toutes les données ont été effacées', 'success');
+            }
+        }
+
+        function exportToExcel() {
+            if (scannedData.length === 0) {
+                showMessage('Aucune donnée à exporter', 'error');
+                return;
+            }
+
+            // Préparer les données pour Excel
+            const excelData = scannedData.map(item => ({
+                'N°': item.id,
+                'N° Palette': item.palette,
+                'Code': item.code,
+                'Quantité': item.quantity,
+                'Ordre': item.ordre,
+                'Date/Heure': item.dateTime
+            }));
+
+            // Créer le workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+
+            // Ajuster la largeur des colonnes
+            ws['!cols'] = [
+                { wch: 5 },
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 12 },
+                { wch: 20 },
+                { wch: 20 }
+            ];
+
+            // Ajouter la feuille au workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Bon de Livraison');
+
+            // Générer le nom du fichier avec la date
+            const now = new Date();
+            const fileName = `Bon_Livraison_${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}.xlsx`;
+
+            // Télécharger le fichier
+            XLSX.writeFile(wb, fileName);
+            
+            showMessage('Fichier Excel exporté avec succès!', 'success');
+        }
+
+        // Fonctions de la caméra
+        function openCamera() {
+            const paletteNumber = document.getElementById('paletteNumber').value.trim();
+            
+            if (!paletteNumber) {
+                showMessage('⚠️ Veuillez d\'abord saisir le numéro de palette!', 'error');
+                document.getElementById('paletteNumber').focus();
+                return;
+            }
+
+            document.getElementById('scanner-container').classList.add('active');
+            cameraActive = true;
+            
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    },
+                },
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "i2of5_reader"
+                    ]
+                },
+            }, function(err) {
+                if (err) {
+                    console.error(err);
+                    showMessage('Erreur d\'accès à la caméra: ' + err, 'error');
+                    closeCamera();
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function(result) {
+                if (cameraActive && result.codeResult.code) {
+                    const code = result.codeResult.code;
+                    document.getElementById('barcodeInput').value = code;
+                    
+                    // Vérifier si c'est au bon format
+                    if ((code.match(/;/g) || []).length === 2) {
+                        addBarcode();
+                    } else {
+                        showMessage('Code scanné: ' + code + ' - Ajoutez ;quantité;ordre', 'success');
+                    }
+                    
+                    // Fermer la caméra après le scan
+                    setTimeout(() => {
+                        closeCamera();
+                    }, 500);
+                }
+            });
+        }
+
+        function closeCamera() {
+            cameraActive = false;
+            document.getElementById('scanner-container').classList.remove('active');
+            Quagga.stop();
+        }
+    </script>
+</body>
+</html>
