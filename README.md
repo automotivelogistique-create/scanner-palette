@@ -1,0 +1,2 @@
+# scanner-palette
+scanner-palette
